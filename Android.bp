@@ -1,0 +1,58 @@
+/*
+ * Copyright (c) 2022 The LeafOS Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+android_library {
+    name: "com.artifex.mupdf_viewer",
+    platform_apis: true,
+    system_ext_specific: true,
+    srcs: [
+        "jni/platform/java/src/**/*.java",
+        "lib/src/main/java/**/*.java",
+    ],
+    resource_dirs: [
+        "lib/src/main/res",
+    ],
+    static_libs: [
+        "androidx.appcompat_appcompat",
+        "com.artifex.mupdf_fitz",
+    ],
+    manifest: "lib/src/main/AndroidManifest.xml",
+    optimize: {
+        enabled: false,
+    },
+}
+
+android_app {
+    name: "MuPDF",
+    platform_apis: true,
+    system_ext_specific: true,
+    srcs: [
+        "app/src/main/java/**/*.java",
+    ],
+    resource_dirs: [
+        "app/src/main/res",
+    ],
+    static_libs: ["com.artifex.mupdf_viewer"],
+    jni_libs: ["libmupdf_java"],
+    manifest: "app/src/main/AndroidManifest.xml",
+    optimize: {
+        enabled: false,
+    },
+    aaptflags: [
+        "--rename-manifest-package",
+        "org.leafos.mupdf",
+    ],
+}

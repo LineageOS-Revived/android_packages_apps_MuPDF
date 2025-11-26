@@ -4,6 +4,7 @@
 *.iml
 android.keystore
 build
+jni
 local.properties
 MAVEN
 tags
