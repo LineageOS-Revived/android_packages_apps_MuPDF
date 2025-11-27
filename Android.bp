@@ -53,6 +53,6 @@ android_app {
     },
     aaptflags: [
         "--rename-manifest-package",
-        "org.leafos.mupdf",
+        "org.lineageos.mupdf",
     ],
 }
