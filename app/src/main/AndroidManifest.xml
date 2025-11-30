@@ -5,7 +5,7 @@
 	>
 	<application
 		android:label="MuPDF viewer"
-		android:icon="@mipmap/ic_launcher"
+		android:icon="@drawable/ic_mupdf"
 		>
 		<activity
 			android:name=".LibraryActivity"
