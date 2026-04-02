@@ -79,9 +79,13 @@ public class PageView extends ViewGroup {
 
 	private       Point     mPatchViewSize; // View size on the basis of which the patch was created
 	private       Rect      mPatchArea;
-	private       ImageView mPatch;
+
 	private       Bitmap    mPatchBm;
+	private       Bitmap    mOldPatchBm;
+	private       ImageView mPatch;
+
 	private       CancellableAsyncTask<Void, Boolean> mDrawPatch;
+
 	private       Quad      mSearchBoxes[][];
 	protected     Link      mLinks[];
 	private       View      mSearchView;
@@ -93,14 +97,15 @@ public class PageView extends ViewGroup {
 	private       ProgressBar mBusyIndicator;
 	private final Handler   mHandler = new Handler();
 
-	public PageView(Context c, MuPDFCore core, Point parentSize, Bitmap sharedHqBm) {
+	public PageView(Context c, MuPDFCore core, Point parentSize, Bitmap sharedHqBm1, Bitmap sharedHqBm2) {
 		super(c);
 		mContext = c;
 		mCore = core;
 		mParentSize = parentSize;
 		setBackgroundColor(BACKGROUND_COLOR);
 		mEntireBm = Bitmap.createBitmap(parentSize.x, parentSize.y, Config.ARGB_8888);
-		mPatchBm = sharedHqBm;
+		mPatchBm = sharedHqBm1;
+		mOldPatchBm = sharedHqBm2;
 		mEntireMat = new Matrix();
 	}
 
@@ -168,6 +173,10 @@ public class PageView extends ViewGroup {
 		if (mPatchBm!=null)
 			mPatchBm.recycle();
 		mPatchBm = null;
+
+		if (mOldPatchBm!=null)
+			mOldPatchBm.recycle();
+		mOldPatchBm = null;
 	}
 
 	public void blank(int page) {
@@ -441,7 +450,7 @@ public class PageView extends ViewGroup {
 		}
 	}
 
-	public void updateHq(boolean update) {
+	public void updateHq() {
 		if (mErrorIndicator != null) {
 			if (mPatch != null) {
 				mPatch.setImageBitmap(null);
@@ -470,37 +479,36 @@ public class PageView extends ViewGroup {
 
 			boolean area_unchanged = patchArea.equals(mPatchArea) && patchViewSize.equals(mPatchViewSize);
 
-			// If being asked for the same area as last time and not because of an update then nothing to do
-			if (area_unchanged && !update)
+			// If being asked for the same area as last time
+			if (area_unchanged)
 				return;
 
-			boolean completeRedraw = !(area_unchanged && update);
-
-			// Stop the drawing of previous patch if still going
 			if (mDrawPatch != null) {
+				// Stop the drawing of previous patch if still going
 				mDrawPatch.cancel();
 				mDrawPatch = null;
+			} else {
+				// Swap old and new for the background render
+				Bitmap swapPatchBm = mPatchBm;
+				mPatchBm = mOldPatchBm;
+				mOldPatchBm = swapPatchBm;
 			}
 
-			// Create and add the image view if not already done
 			if (mPatch == null) {
+				// Create the mPatch image view if not already done
 				mPatch = new OpaqueImageView(mContext);
 				mPatch.setScaleType(ImageView.ScaleType.MATRIX);
 				addView(mPatch);
+
 				if (mSearchView != null)
 					mSearchView.bringToFront();
 			}
 
 			CancellableTaskDefinition<Void, Boolean> task;
 
-			if (completeRedraw)
-				task = getDrawPageTask(mPatchBm, patchViewSize.x, patchViewSize.y,
-								patchArea.left, patchArea.top,
-								patchArea.width(), patchArea.height());
-			else
-				task = getUpdatePageTask(mPatchBm, patchViewSize.x, patchViewSize.y,
-						patchArea.left, patchArea.top,
-						patchArea.width(), patchArea.height());
+			task = getDrawPageTask(mPatchBm, patchViewSize.x, patchViewSize.y,
+							patchArea.left, patchArea.top,
+							patchArea.width(), patchArea.height());
 
 			mDrawPatch = new CancellableAsyncTask<Void, Boolean>(task) {
 
@@ -511,6 +519,7 @@ public class PageView extends ViewGroup {
 						clearRenderError();
 						mPatch.setImageBitmap(mPatchBm);
 						mPatch.invalidate();
+
 						//requestLayout();
 						// Calling requestLayout here doesn't lead to a later call to layout. No idea
 						// why, but apparently others have run into the problem.
@@ -518,42 +527,13 @@ public class PageView extends ViewGroup {
 					} else {
 						setRenderError("Error rendering patch");
 					}
+					mDrawPatch = null;
 				}
 			};
 
+			Log.e(APP, "execute task");
 			mDrawPatch.execute();
 		}
-	}
-
-	public void update() {
-		// Cancel pending render task
-		if (mDrawEntire != null) {
-			mDrawEntire.cancel();
-			mDrawEntire = null;
-		}
-
-		if (mDrawPatch != null) {
-			mDrawPatch.cancel();
-			mDrawPatch = null;
-		}
-
-		// Render the page in the background
-		mDrawEntire = new CancellableAsyncTask<Void, Boolean>(getUpdatePageTask(mEntireBm, mSize.x, mSize.y, 0, 0, mSize.x, mSize.y)) {
-
-			public void onPostExecute(Boolean result) {
-				if (result.booleanValue()) {
-					clearRenderError();
-					mEntire.setImageBitmap(mEntireBm);
-					mEntire.invalidate();
-				} else {
-					setRenderError("Error updating page");
-				}
-			}
-		};
-
-		mDrawEntire.execute();
-
-		updateHq(true);
 	}
 
 	public void removeHq() {
@@ -569,6 +549,7 @@ public class PageView extends ViewGroup {
 			if (mPatch != null) {
 				mPatch.setImageBitmap(null);
 				mPatch.invalidate();
+				removeView(mPatch);
 			}
 	}
 
@@ -637,29 +618,6 @@ public class PageView extends ViewGroup {
 			}
 		};
 
-	}
-
-	protected CancellableTaskDefinition<Void, Boolean> getUpdatePageTask(final Bitmap bm, final int sizeX, final int sizeY,
-			final int patchX, final int patchY, final int patchWidth, final int patchHeight)
-	{
-		return new MuPDFCancellableTaskDefinition<Void, Boolean>() {
-			@Override
-			public Boolean doInBackground(Cookie cookie, Void ... params) {
-				if (bm == null)
-					return new Boolean(false);
-				// Workaround bug in Android Honeycomb 3.x, where the bitmap generation count
-				// is not incremented when drawing.
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB &&
-						Build.VERSION.SDK_INT < Build.VERSION_CODES.ICE_CREAM_SANDWICH)
-					bm.eraseColor(0);
-				try {
-					mCore.updatePage(bm, mPageNumber, sizeX, sizeY, patchX, patchY, patchWidth, patchHeight, cookie);
-					return new Boolean(true);
-				} catch (RuntimeException e) {
-					return new Boolean(false);
-				}
-			}
-		};
 	}
 
 	protected Link[] getLinkInfo() {
