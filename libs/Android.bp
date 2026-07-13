@@ -17,7 +17,7 @@
 cc_prebuilt_library_shared {
     name: "libmupdf_java",
     sdk_version: "current",
-    system_ext_specific: true,
+    product_specific: true,
     strip: {
         none: true,
     },

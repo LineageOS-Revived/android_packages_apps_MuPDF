@@ -17,7 +17,7 @@
 android_library {
     name: "com.artifex.mupdf_viewer",
     platform_apis: true,
-    system_ext_specific: true,
+    product_specific: true,
     srcs: [
         "jni/platform/java/src/**/*.java",
         "lib/src/main/java/**/*.java",
@@ -38,7 +38,7 @@ android_library {
 android_app {
     name: "MuPDF",
     platform_apis: true,
-    system_ext_specific: true,
+    product_specific: true,
     srcs: [
         "app/src/main/java/**/*.java",
     ],
