@@ -2,14 +2,14 @@ apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
 
 group = 'com.artifex.mupdf'
-version = '1.27.0a'
+version = '1.28.5a'
 
 dependencies {
 	implementation 'androidx.appcompat:appcompat:1.1.+'
 	if (file('../jni/build.gradle').isFile())
 		api project(':jni')
 	else
-		api 'com.artifex.mupdf:fitz:1.27.0'
+		api 'com.artifex.mupdf:fitz:1.28.5'
 }
 
 android {
@@ -17,7 +17,7 @@ android {
 	compileSdkVersion 33
 	defaultConfig {
 		minSdkVersion 21
-		targetSdkVersion 35
+		targetSdkVersion 36
 	}
 	publishing {
 		singleVariant("release") {
